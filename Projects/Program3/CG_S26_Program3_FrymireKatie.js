@@ -145,46 +145,22 @@ var lightPositions = [
 
 var dayLightAmbients = [
     vec4(0.45, 0.35, 0.32, 1.0),   
-    vec4(0.00, 0.00, 0.04, 1.0),
-    vec4(0.04, 0.00, 0.00, 1.0),
-    vec4(0.00, 0.04, 0.00, 1.0),
-    vec4(0.04, 0.04, 0.00, 1.0)
 ];
 var dayLightDiffuses = [
     vec4(0.9, 0.9, 0.8, 1.0),   
-    vec4(0.0, 0.0,  0.9, 1.0),
-    vec4(0.9, 0.0,  0.0, 1.0),
-    vec4(0.0, 0.9,  0.0, 1.0),
-    vec4(0.9, 0.9,  0.0, 1.0)
 ];
 var dayLightSpeculars = [
     vec4(0.9, 0.85, 0.7, 1.0),   
-    vec4(0.0, 0.0, 0.6, 1.0),
-    vec4(0.6, 0.0, 0.0, 1.0),
-    vec4(0.0, 0.6, 0.0, 1.0),
-    vec4(0.6, 0.6, 0.0, 1.0)
 ];
 
 var nightLightAmbients = [
     vec4(0.22, 0.22, 0.25, 1.0),   
-    vec4(0.00, 0.00, 0.02, 1.0),
-    vec4(0.02, 0.00, 0.00, 1.0),
-    vec4(0.00, 0.02, 0.00, 1.0),
-    vec4(0.02, 0.02, 0.00, 1.0)
 ];
 var nightLightDiffuses = [
     vec4(0.35, 0.35, 0.5, 1.0),   
-    vec4(0.0,  0.0,  0.4, 1.0),
-    vec4(0.4,  0.0,  0.0, 1.0),
-    vec4(0.0,  0.4,  0.0, 1.0),
-    vec4(0.4,  0.4,  0.0, 1.0)
 ];
 var nightLightSpeculars = [
     vec4(0.3, 0.3, 0.5, 1.0),   
-    vec4(0.0, 0.0, 0.3, 1.0),
-    vec4(0.3, 0.0, 0.0, 1.0),
-    vec4(0.0, 0.3, 0.0, 1.0),
-    vec4(0.3, 0.3, 0.0, 1.0)
 ];
 
 
@@ -428,7 +404,6 @@ function init() {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([100, 255, 0, 255]));
     imgG = new Image();
     imgG.crossOrigin = "anonymous";
-    // imgG.src = "https://i.imgur.com/SohhFGz.png";
     imgG.src = "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/grass.png";
     
     imgG.addEventListener('load', function(){
@@ -436,6 +411,7 @@ function init() {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgG);
         gl.generateMipmap(gl.TEXTURE_2D);
     });
+
     //------------------------------------------------------------------------
     //SKYBOX 
     //------------------------------------------------------------------------
@@ -460,54 +436,54 @@ function init() {
     const faceInfosDay = [
         {
             target: gl.TEXTURE_CUBE_MAP_POSITIVE_X,
-            url: "https://i.imgur.com/CDOy9JA.jpeg",
+            url: "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/dpx.jpeg",
         },
         {
             target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
-            url: "https://i.imgur.com/Nol1uUe.jpeg",
+            url: "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/dnx.jpeg",
         },
         {
             target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
-            url: "https://i.imgur.com/27mvm3G.jpeg",
+            url: "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/dpy.jpeg",
         },
         {
             target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
-            url: "https://i.imgur.com/sD7wmTx.jpeg",
+            url: "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/dny.jpeg",
         },
         {
             target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
-            url: "https://i.imgur.com/zmb9uS7.jpeg",
+            url: "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/dpz.jpeg",
         },
         {
             target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-            url: "https://i.imgur.com/eAtRu4C.jpeg",
+            url: "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/dnz.jpeg",
         },
     ];
     
     const faceInfosNight = [
         {
             target: gl.TEXTURE_CUBE_MAP_POSITIVE_X,
-            url: 'https://i.imgur.com/uBgZQLU.jpeg',
+            url: 'https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/npx.jpeg',
         },
         {
             target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
-            url: 'https://i.imgur.com/mp3HHQt.jpeg',
+            url: 'https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/nnx.jpeg',
         },
         {
             target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
-            url: 'https://i.imgur.com/Vrr31ey.jpeg',
+            url: 'https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/npy.jpeg',
         },
         {
             target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
-            url: 'https://i.imgur.com/ACsG2uh.jpeg',
+            url: 'https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/nny.jpeg',
         },
         {
             target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
-            url: 'https://i.imgur.com/5LOnxEb.jpeg',
+            url: 'https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/npz.jpeg',
         },
         {
             target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-            url: 'https://i.imgur.com/ffNUzLS.jpeg',
+            url: 'https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/nnz.jpeg',
         },
     ];
 
@@ -535,8 +511,24 @@ function init() {
     gl.bindBuffer(gl.ARRAY_BUFFER, manNBuffer);
     gl.vertexAttribPointer(aNormalLocM, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(aNormalLocM);
-
     gl.bindVertexArray(null);
+
+    textureF= gl.createTexture();
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, textureF);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 0, 0, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+    const imgF = new Image();
+    imgF.crossOrigin = "anonymous";
+    imgF.src = "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/face.png";
+    imgF.addEventListener('load', function(){
+        gl.bindTexture(gl.TEXTURE_2D, textureF);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgF);
+        gl.generateMipmap(gl.TEXTURE_2D);
+    });
 
     //------------------------------------------------------------------------
     // event listeners
@@ -787,6 +779,11 @@ function render() {
     requestAnimationFrame(render);
 }
 
+function setBodyPartTexture(texture, texUnit){
+        gl.activeTexture(gl.TEXTURE + texUnit);
+        gl.bindTexture(gl.TEXTURE_2D, texture); 
+        gl.uniform1i(gl.getUniformLocation(programM, "uTexture"), texUnit);
+}
 
 function head(){ 
     var s = scale(HEAD_WIDTH, HEAD_HEIGHT, HEAD_WIDTH);
@@ -795,6 +792,7 @@ function head(){
     var n = normalMatrix(t, true); 
     gl.uniformMatrix4fv(modelViewMatrixLocM,  false, flatten(t)  );
     gl.uniformMatrix3fv(nMatrixLocM, false, flatten(n)); 
+    setBodyPartTexture(textureF, 3);
     drawCube();
 }
 
