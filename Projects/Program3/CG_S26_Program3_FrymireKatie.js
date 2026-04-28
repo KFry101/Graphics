@@ -118,10 +118,10 @@ var FigYIdx      = 3;
 var FigZIdx      = 4;
 var LShoulderIdx = 5;
 var LElbowIdx    = 6;
-var RHipIdx      = 7;
-var RKneeIdx     = 8;
-var LHipIdx      = 9;
-var LKneeIdx     = 10;
+var RHipIdz      = 7;
+var RKneeIdz     = 8;
+var LHipIdz      = 9;
+var LKneeIdz     = 10;
 var RShoulderIdz = 11;
 var RElbowIdz    = 12;
 var LShoulderIdz = 13;
@@ -777,14 +777,21 @@ function render() {
     if ( walking ) {
         walkAngle += 0.1;
 
-        manTheta[RHipIdx] =  25 * Math.sin( walkAngle );
-        manTheta[LHipIdx] = -25 * Math.sin( walkAngle );
+        manTheta[RHipIdz] =  25 * Math.sin( walkAngle );
+        manTheta[LHipIdz] = -25 * Math.sin( walkAngle );
 
-        manTheta[RKneeIdx] = -20 * Math.max( 0, Math.sin( walkAngle - 0.6 ) );
-        manTheta[LKneeIdx] = -20 * Math.max( 0, Math.sin( -walkAngle - 0.6 ) );
+        manTheta[RKneeIdz] = -20 * Math.max( 0, Math.sin( walkAngle - 0.6 ) );
+        manTheta[LKneeIdz] = -20 * Math.max( 0, Math.sin( -walkAngle - 0.6 ) );
 
         manTheta[RShoulderIdz] = -20 * Math.sin( walkAngle );
         manTheta[LShoulderIdz] =  20 * Math.sin( walkAngle );
+    } else {
+        manTheta[RHipIdz] =  0;
+        manTheta[LHipIdz] =  0;
+        manTheta[RKneeIdz] =  0;
+        manTheta[LKneeIdz] =  0;
+        manTheta[RShoulderIdz] =  0;
+        manTheta[LShoulderIdz] =  0;
     }
 
     if ( waving ) {
@@ -793,7 +800,14 @@ function render() {
         manTheta[RElbowIdx]    = -35 * Math.sin( waveAngle + 0.8 ) - 70;
         document.getElementById("slider2").value = manTheta[RShoulderIdx];
         document.getElementById("slider3").value = manTheta[RElbowIdx];
+    } else { 
+        manTheta[RShoulderIdx] = -30;
+        manTheta[RElbowIdx]    =  23;
+        document.getElementById("slider2").value = manTheta[RShoulderIdx];
+        document.getElementById("slider3").value = manTheta[RElbowIdx];
+
     }
+
 
    
 
@@ -875,6 +889,7 @@ function render() {
     requestAnimationFrame(render);
 }
 
+//-----------------------------------------------------------------------------
 function setBodyPartTexture(texture, texUnit){
         var units = [
             gl.TEXTURE0, gl.TEXTURE1, gl.TEXTURE2,
@@ -962,7 +977,7 @@ function lowerArmR() {
 function upperLegR() {
     var s = scale(UPPER_LEG_WIDTH, UPPER_LEG_HEIGHT, UPPER_LEG_WIDTH);
     var instanceMatrix = mult( translate( BODY_WIDTH * 0.8, -BODY_HEIGHT * 0.5, 0.0 ),
-                               mult( rotate( manTheta[RHipIdx], vec3(1, 0, 0) ),
+                               mult( rotate( manTheta[RHipIdz], vec3(1, 0, 0) ),
                                      mult( translate( 0.0, -UPPER_LEG_HEIGHT / 2.0, 0.0 ), s ) ) );
     var t = mult(modelViewMatrix, instanceMatrix);
     var n = normalMatrix(t, true); 
@@ -974,9 +989,9 @@ function upperLegR() {
 function lowerLegR() {
     var s = scale(LOWER_LEG_WIDTH, LOWER_LEG_HEIGHT, LOWER_LEG_WIDTH);
 
-    var hipPivot  = mult( translate( BODY_WIDTH * 0.8, -BODY_HEIGHT * 0.5, 0.0 ), rotate( manTheta[RHipIdx], vec3(1, 0, 0) ) );
+    var hipPivot  = mult( translate( BODY_WIDTH * 0.8, -BODY_HEIGHT * 0.5, 0.0 ), rotate( manTheta[RHipIdz], vec3(1, 0, 0) ) );
 
-    var kneePivot = mult( hipPivot, mult( translate( 0.0, -UPPER_LEG_HEIGHT, 0.0 ), rotate( manTheta[RKneeIdx], vec3(1, 0, 0) ) ) );
+    var kneePivot = mult( hipPivot, mult( translate( 0.0, -UPPER_LEG_HEIGHT, 0.0 ), rotate( manTheta[RKneeIdz], vec3(1, 0, 0) ) ) );
 
     var instanceMatrix = mult( kneePivot, mult( translate( 0.0, -LOWER_LEG_HEIGHT / 2.0, 0.0 ), s ) );
 
@@ -990,7 +1005,7 @@ function lowerLegR() {
 function upperLegL() {
     var s = scale(UPPER_LEG_WIDTH, UPPER_LEG_HEIGHT, UPPER_LEG_WIDTH);
     var instanceMatrix = mult( translate( -BODY_WIDTH * 0.8, -BODY_HEIGHT * 0.5, 0.0 ),
-                               mult( rotate( manTheta[LHipIdx], vec3(1, 0, 0) ),
+                               mult( rotate( manTheta[LHipIdz], vec3(1, 0, 0) ),
                                      mult( translate( 0.0, -UPPER_LEG_HEIGHT / 2.0, 0.0 ), s ) ) );
     var t = mult(modelViewMatrix, instanceMatrix);
     var n = normalMatrix(t, true); 
@@ -1002,9 +1017,9 @@ function upperLegL() {
 function lowerLegL() {
     var s = scale(LOWER_LEG_WIDTH, LOWER_LEG_HEIGHT, LOWER_LEG_WIDTH);
 
-    var hipPivot  = mult( translate( -BODY_WIDTH * 0.8, -BODY_HEIGHT * 0.5, 0.0 ), rotate( manTheta[LHipIdx], vec3(1, 0, 0) ) );
+    var hipPivot  = mult( translate( -BODY_WIDTH * 0.8, -BODY_HEIGHT * 0.5, 0.0 ), rotate( manTheta[LHipIdz], vec3(1, 0, 0) ) );
 
-    var kneePivot = mult( hipPivot, mult( translate( 0.0, -UPPER_LEG_HEIGHT, 0.0 ),rotate( manTheta[LKneeIdx], vec3(1, 0, 0) ) ) );
+    var kneePivot = mult( hipPivot, mult( translate( 0.0, -UPPER_LEG_HEIGHT, 0.0 ),rotate( manTheta[LKneeIdz], vec3(1, 0, 0) ) ) );
 
     var instanceMatrix = mult( kneePivot, mult( translate( 0.0, -LOWER_LEG_HEIGHT / 2.0, 0.0 ), s ) );
 
