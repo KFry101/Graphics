@@ -428,7 +428,8 @@ function init() {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([100, 255, 0, 255]));
     imgG = new Image();
     imgG.crossOrigin = "anonymous";
-    imgG.src = "https://i.imgur.com/SohhFGz.png";
+    // imgG.src = "https://i.imgur.com/SohhFGz.png";
+    imgG.src = "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/grass.png";
     
     imgG.addEventListener('load', function(){
         gl.bindTexture(gl.TEXTURE_2D, textureG );
