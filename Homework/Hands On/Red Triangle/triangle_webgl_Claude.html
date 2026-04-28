@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebGL 2.0 — Red Isosceles Triangle</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d0d0d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      color: #888;
+    }
+
+    h1 {
+      font-size: 0.75rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      color: #444;
+    }
+
+    canvas {
+      display: block;
+      border: 1px solid #1e1e1e;
+      box-shadow: 0 0 60px rgba(220, 30, 30, 0.12);
+    }
+
+    p {
+      margin-top: 1.25rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      color: #333;
+    }
+
+    #status {
+      margin-top: 0.5rem;
+      font-size: 0.7rem;
+      color: #c0392b;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>OpenGL ES 3 &nbsp;/&nbsp; WebGL 2.0</h1>
+  <canvas id="glCanvas" width="400" height="400"></canvas>
+  <p>Isosceles Triangle &nbsp;|&nbsp; base 150 px &nbsp;&bull;&nbsp; height 200 px</p>
+  <div id="status"></div>
+
+  <script>
+    // ─── Vertex Shader (GLSL ES 3.00) ────────────────────────────────────────
+    // Positions are supplied in clip space (−1 to +1).
+    const VERTEX_SHADER_SRC = `#version 300 es
+precision highp float;
+
+// Per-vertex position in clip space
+in vec2 a_position;
+
+void main() {
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}
+`;
+
+    // ─── Fragment Shader (GLSL ES 3.00) ──────────────────────────────────────
+    const FRAGMENT_SHADER_SRC = `#version 300 es
+precision mediump float;
+
+// Explicit output variable (required in GLSL ES 3.00)
+out vec4 fragColor;
+
+void main() {
+  // Pure red — full opacity
+  fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
+`;
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+    function compileShader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        const info = gl.getShaderInfoLog(shader);
+        gl.deleteShader(shader);
+        throw new Error(`Shader compile error:\n${info}`);
+      }
+      return shader;
+    }
+
+    function createProgram(gl, vertSrc, fragSrc) {
+      const vert = compileShader(gl, gl.VERTEX_SHADER,   vertSrc);
+      const frag = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc);
+
+      const program = gl.createProgram();
+      gl.attachShader(program, vert);
+      gl.attachShader(program, frag);
+      gl.linkProgram(program);
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        const info = gl.getProgramInfoLog(program);
+        gl.deleteProgram(program);
+        throw new Error(`Program link error:\n${info}`);
+      }
+
+      // Shaders are now baked into the program; safe to free
+      gl.deleteShader(vert);
+      gl.deleteShader(frag);
+      return program;
+    }
+
+    // ─── Canvas dimensions ───────────────────────────────────────────────────
+    const CANVAS_W = 400;   // pixels
+    const CANVAS_H = 400;   // pixels
+
+    // ─── Triangle geometry (pixel space → clip space) ─────────────────────
+    // Triangle:  base = 150 px, height = 200 px, centred at (200, 200)
+    //
+    // Pixel-space vertices (Y increases downward, origin top-left):
+    //   apex:        (200,  100)   ← centre_x,  centre_y − height/2
+    //   bottom-left: (125,  300)   ← centre_x − base/2, centre_y + height/2
+    //   bottom-right:(275,  300)   ← centre_x + base/2, centre_y + height/2
+    //
+    // Clip-space conversion:
+    //   x_clip =  (px / canvasW) * 2 − 1
+    //   y_clip = −((py / canvasH) * 2 − 1)   (Y is flipped in clip space)
+
+    function toClip(px, py) {
+      return [
+         (px / CANVAS_W) * 2.0 - 1.0,
+        -((py / CANVAS_H) * 2.0 - 1.0)
+      ];
+    }
+
+    const [ax, ay] = toClip(200, 100);   // apex
+    const [lx, ly] = toClip(125, 300);   // bottom-left
+    const [rx, ry] = toClip(275, 300);   // bottom-right
+
+    // Interleaved flat array:  [x0,y0,  x1,y1,  x2,y2]
+    const vertices = new Float32Array([
+      ax, ay,
+      lx, ly,
+      rx, ry
+    ]);
+
+    // ─── Main ─────────────────────────────────────────────────────────────────
+    const canvas  = document.getElementById('glCanvas');
+    const statusEl = document.getElementById('status');
+
+    // Request a WebGL 2 context (= OpenGL ES 3.0 on the GPU)
+    const gl = canvas.getContext('webgl2');
+
+    if (!gl) {
+      statusEl.textContent = 'WebGL 2.0 is not supported in this browser.';
+    } else {
+      statusEl.textContent = 'WebGL 2.0 context acquired.';
+
+      try {
+        // 1. Build shader program
+        const program = createProgram(gl, VERTEX_SHADER_SRC, FRAGMENT_SHADER_SRC);
+
+        // 2. Create a Vertex Array Object (VAO) — required in WebGL 2 / GLSL ES 3
+        const vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+
+        // 3. Upload geometry to a VBO
+        const vbo = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+        // 4. Wire attribute a_position (location 0) → 2 floats per vertex
+        const attribLoc = gl.getAttribLocation(program, 'a_position');
+        gl.enableVertexAttribArray(attribLoc);
+        gl.vertexAttribPointer(
+          attribLoc,
+          2,            // components per vertex
+          gl.FLOAT,     // data type
+          false,        // don't normalise
+          0,            // stride (tightly packed)
+          0             // offset
+        );
+
+        // 5. Unbind VAO (good practice)
+        gl.bindVertexArray(null);
+
+        // 6. Clear + draw
+        gl.viewport(0, 0, CANVAS_W, CANVAS_H);
+        gl.clearColor(0.05, 0.05, 0.05, 1.0);   // near-black background
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(program);
+        gl.bindVertexArray(vao);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);       // 3 vertices → 1 triangle
+
+        statusEl.textContent = '✓ Triangle rendered successfully.';
+        statusEl.style.color = '#2ecc71';
+
+      } catch (err) {
+        statusEl.textContent = `Error: ${err.message}`;
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>

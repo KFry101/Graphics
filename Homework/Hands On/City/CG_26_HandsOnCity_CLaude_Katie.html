@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHOST//WIRE · CHROME DISTRICT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap');
+
+  :root {
+    --acid:   #d4ff00;
+    --magenta:#ff2d78;
+    --cyan:   #00f5ff;
+    --purple: #9b00ff;
+    --dim:    #1a0a2e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  /* Heavy scanline + vignette overlay */
+  #scanline {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 55%, #0a0010 100%),
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0,0.18) 2px,
+        rgba(0,0,0,0.18) 3px
+      );
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Glitch noise grain */
+  #grain {
+    position: fixed;
+    inset: 0;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px;
+    pointer-events: none;
+    z-index: 11;
+    animation: grainShift 0.12s steps(1) infinite;
+  }
+  @keyframes grainShift {
+    0%  { background-position: 0 0; }
+    25% { background-position: 40px -20px; }
+    50% { background-position: -30px 15px; }
+    75% { background-position: 20px 35px; }
+  }
+
+  #title {
+    position: fixed;
+    top: 28px; left: 36px;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  #title h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 2.6rem;
+    line-height: 1;
+    color: var(--acid);
+    text-shadow:
+      0 0 8px  var(--acid),
+      0 0 28px var(--acid),
+      0 0 60px #aaff0088,
+      2px 2px 0 var(--magenta);
+    letter-spacing: 0.06em;
+    animation: glitch 6s infinite;
+  }
+
+  @keyframes glitch {
+    0%, 92%, 100% { clip-path: none; transform: none; }
+    93%  { clip-path: inset(30% 0 40% 0); transform: translateX(-4px); color: var(--cyan); }
+    94%  { clip-path: inset(60% 0 10% 0); transform: translateX(4px);  color: var(--magenta); }
+    95%  { clip-path: none; transform: none; color: var(--acid); }
+  }
+
+  #title .sub {
+    margin-top: 6px;
+    font-size: 0.62rem;
+    color: var(--magenta);
+    letter-spacing: 0.3em;
+    text-shadow: 0 0 10px var(--magenta);
+    opacity: 0.85;
+  }
+
+  #title .tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.55rem;
+    color: var(--purple);
+    letter-spacing: 0.2em;
+    border: 1px solid var(--purple);
+    padding: 2px 8px;
+    text-shadow: 0 0 8px var(--purple);
+    box-shadow: 0 0 8px #9b00ff44 inset;
+  }
+
+  #docs {
+    position: fixed;
+    bottom: 24px; right: 28px;
+    width: 310px;
+    background: rgba(10,0,20,0.82);
+    border: 1px solid var(--magenta);
+    border-left: 3px solid var(--acid);
+    padding: 14px 16px;
+    color: #c0a0cc;
+    font-size: 0.6rem;
+    line-height: 1.75;
+    z-index: 20;
+    box-shadow: 0 0 24px #ff2d7833, 0 0 4px #ff2d7866 inset;
+  }
+
+  #docs .heading {
+    color: var(--acid);
+    font-size: 0.66rem;
+    letter-spacing: 0.22em;
+    margin-bottom: 6px;
+    text-shadow: 0 0 8px var(--acid);
+  }
+
+  #docs .label { color: var(--cyan); text-shadow: 0 0 6px var(--cyan); }
+  #docs code   { color: var(--magenta); font-size: 0.58rem; }
+
+  #hint {
+    position: fixed;
+    bottom: 24px; left: 36px;
+    color: #ffffff28;
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    line-height: 2.2;
+    z-index: 20;
+  }
+
+  /* Horizontal accent line */
+  #hline {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, var(--magenta), var(--acid), var(--cyan));
+    z-index: 20;
+    box-shadow: 0 0 12px var(--acid);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="glCanvas"></canvas>
+<div id="scanline"></div>
+
+<div id="title">
+  <h1>GHOST//WIRE</h1>
+  <p class="sub">CHROME DISTRICT · SECTOR 7</p>
+  <span class="tag">▸ POPULATION: 12.4M · UPLINK: ACTIVE</span>
+</div>
+
+<div id="docs">
+  <div class="heading">// AI-ASSISTED DOCUMENTATION</div>
+  <div>Generated with <span class="label">Claude Sonnet 4.6</span> (Anthropic, 2026).<br>
+  Prompt: "Render a 3D city scene from 9–12 scaled/translated cube instances using a single mesh and perspective projection."</div>
+  <br>
+  <div class="heading">// VIEWING VOLUME &amp; PERSPECTIVE</div>
+  <div>
+    <span class="label">perspectiveMatrix()</span> — lines 198–217<br>
+    Constructs a 4×4 frustum projection matrix.<br><br>
+    <span class="label">fovy</span> = 55° (vertical field of view)<br>
+    <span class="label">near</span> = 0.1 · <span class="label">far</span> = 100.0<br>
+    These define the <em>viewing volume</em> (truncated frustum).<br><br>
+    The matrix maps eye-space coords into NDC using:<br>
+    <code>f = 1/tan(fovy/2)</code><br>
+    <code>m[0] = f/aspect, m[5] = f</code><br>
+    <code>m[10] = (far+near)/(near−far)</code><br>
+    <code>m[11] = −1 (perspective divide)</code><br>
+    <code>m[14] = 2·far·near/(near−far)</code>
+  </div>
+</div>
+
+<div id="hint">
+  DRAG to orbit &nbsp;·&nbsp; SCROLL to zoom
+</div>
+
+<script>
+// ============================================================
+// NEON CITY — WebGL 3D Scene
+// AI Platform: Claude Sonnet 4.6 (Anthropic, March 2026)
+// All geometry derives from a single unit-cube mesh.
+// ============================================================
+
+const canvas = document.getElementById('glCanvas');
+const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+if (!gl) { alert('WebGL not supported'); }
+// Required for fwidth() in the ground grid fragment shader
+gl.getExtension('OES_standard_derivatives');
+
+// ── Resize ──────────────────────────────────────────────────
+function resize() {
+  canvas.width  = window.innerWidth  * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Shaders ─────────────────────────────────────────────────
+const vsSource = `
+  attribute vec3 aPosition;
+  attribute vec3 aNormal;
+
+  uniform mat4 uModel;
+  uniform mat4 uView;
+  uniform mat4 uProjection;
+  uniform mat3 uNormalMatrix;
+
+  varying vec3 vNormal;
+  varying vec3 vWorldPos;
+  varying vec3 vLocalPos;
+
+  void main() {
+    vec4 worldPos = uModel * vec4(aPosition, 1.0);
+    vWorldPos = worldPos.xyz;
+    vNormal   = normalize(uNormalMatrix * aNormal);
+    vLocalPos = aPosition;
+    gl_Position = uProjection * uView * worldPos;
+  }
+`;
+
+const fsSource = `
+  #extension GL_OES_standard_derivatives : enable
+  precision mediump float;
+
+  varying vec3 vNormal;
+  varying vec3 vWorldPos;
+  varying vec3 vLocalPos;
+
+  uniform vec3  uColor;
+  uniform vec3  uEmissive;
+  uniform float uTime;
+  uniform int   uBuildingIndex;
+  uniform int   uIsGround;
+
+  // Window grid: lit squares on vertical faces
+  float windowGrid(vec2 uv, float cols, float rows) {
+    vec2 cell = fract(uv * vec2(cols, rows));
+    float wx = step(0.18, cell.x) * step(cell.x, 0.82);
+    float wy = step(0.18, cell.y) * step(cell.y, 0.82);
+    return wx * wy;
+  }
+
+  // Hash for per-window randomness
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+
+  void main() {
+    float idx = float(uBuildingIndex);
+
+    // ── Ground: dark grid with magenta/cyan lines ─────────────
+    if (uIsGround == 1) {
+      vec2 gp   = vWorldPos.xz;
+      // Major grid lines every 1 unit
+      vec2 grid = abs(fract(gp - 0.5) - 0.5) / fwidth(gp);
+      float line = min(min(grid.x, grid.y), 1.0);
+      float g    = 1.0 - line;
+      // Alternate magenta / cyan tint per cell
+      vec2 cell = floor(gp);
+      float which = hash(cell);
+      vec3 lineCol = which > 0.5
+        ? vec3(1.0, 0.08, 0.55)   // hot magenta
+        : vec3(0.0, 0.95, 1.0);   // electric cyan
+      // Faint base + bright lines + subtle emissive fog
+      vec3 base = vec3(0.02, 0.0, 0.05);
+      vec3 lit  = base + lineCol * g * 0.55;
+      // Atmospheric purple underglow
+      lit += vec3(0.18, 0.0, 0.28) * 0.12;
+      gl_FragColor = vec4(lit, 1.0);
+      return;
+    }
+
+    // ── Buildings ─────────────────────────────────────────────
+    // Very dim ambient — cyberpunk cities are DARK
+    float amb  = 0.06;
+    // Overhead purple "sky" light
+    vec3  skyDir = normalize(vec3(0.2, 1.0, 0.3));
+    float sky    = max(dot(vNormal, skyDir), 0.0) * 0.18;
+    // Low ground-bounce from magenta below
+    vec3  gndDir = normalize(vec3(-0.3, -1.0, 0.2));
+    float gnd    = max(dot(vNormal, -gndDir), 0.0) * 0.12;
+
+    vec3 lit = uColor * (amb + sky + gnd);
+
+    // ── Windows ───────────────────────────────────────────────
+    float isVert = 1.0 - abs(vNormal.y);
+    // UV from local cube coords mapped to 0..1
+    vec2 wUV = vec2(vLocalPos.x + vLocalPos.z + 0.5, vLocalPos.y + 0.5);
+    float cols = 3.0, rows = 7.0;
+    float win = windowGrid(wUV, cols, rows) * isVert;
+
+    if (win > 0.5) {
+      // Per-window random flicker
+      vec2 winCell = floor(wUV * vec2(cols, rows));
+      float r = hash(winCell + idx * 13.7);
+      float flicker = r > 0.15
+        ? 0.7 + 0.3 * sin(uTime * (1.5 + r * 4.0) + r * 6.28)
+        : 0.0; // some windows are dark / off
+      // Windows glow with the building's emissive colour
+      lit += uEmissive * flicker * 1.4;
+    }
+
+    // ── Emissive facade bleed (neon strips / signage) ─────────
+    // Horizontal accent bands near top and mid of building
+    float yN = vLocalPos.y; // -0.5 .. 0.5
+    float band = smoothstep(0.48, 0.5, abs(yN))       // rooftop rim
+               + smoothstep(0.03, 0.0, abs(yN + 0.1)) // mid band
+               * isVert;
+    lit += uEmissive * band * (0.9 + 0.1 * sin(uTime * 2.0 + idx));
+
+    // ── Atmospheric fog (deep purple-black) ───────────────────
+    float dist  = length(vWorldPos.xz);
+    float fogAmt = clamp((dist - 4.0) / 14.0, 0.0, 0.85);
+    vec3  fogCol = vec3(0.04, 0.0, 0.10);
+    lit = mix(lit, fogCol, fogAmt);
+
+    gl_FragColor = vec4(lit, 1.0);
+  }
+`;
+
+function compileShader(type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS))
+    console.error(gl.getShaderInfoLog(sh));
+  return sh;
+}
+
+const prog = gl.createProgram();
+gl.attachShader(prog, compileShader(gl.VERTEX_SHADER,   vsSource));
+gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSource));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+// ── Attribute / Uniform locations ───────────────────────────
+const aPos      = gl.getAttribLocation(prog,  'aPosition');
+const aNorm     = gl.getAttribLocation(prog,  'aNormal');
+const uModel    = gl.getUniformLocation(prog, 'uModel');
+const uView     = gl.getUniformLocation(prog, 'uView');
+const uProj     = gl.getUniformLocation(prog, 'uProjection');
+const uNormMat  = gl.getUniformLocation(prog, 'uNormalMatrix');
+const uColor    = gl.getUniformLocation(prog, 'uColor');
+const uEmissive = gl.getUniformLocation(prog, 'uEmissive');
+const uTime     = gl.getUniformLocation(prog, 'uTime');
+const uBldIdx   = gl.getUniformLocation(prog, 'uBuildingIndex');
+const uIsGround = gl.getUniformLocation(prog, 'uIsGround');
+
+// ── Single Cube Mesh (unit cube centred at origin) ───────────
+// 6 faces × 2 triangles × 3 verts = 36 vertices (unindexed for simplicity)
+// Each vertex: [x,y,z, nx,ny,nz]
+const cubeData = (() => {
+  const faces = [
+    // pos          normal
+    // +Z front
+    [[-0.5,-0.5, 0.5], [0,0,1]],
+    [[ 0.5,-0.5, 0.5], [0,0,1]],
+    [[ 0.5, 0.5, 0.5], [0,0,1]],
+    [[-0.5,-0.5, 0.5], [0,0,1]],
+    [[ 0.5, 0.5, 0.5], [0,0,1]],
+    [[-0.5, 0.5, 0.5], [0,0,1]],
+    // -Z back
+    [[ 0.5,-0.5,-0.5], [0,0,-1]],
+    [[-0.5,-0.5,-0.5], [0,0,-1]],
+    [[-0.5, 0.5,-0.5], [0,0,-1]],
+    [[ 0.5,-0.5,-0.5], [0,0,-1]],
+    [[-0.5, 0.5,-0.5], [0,0,-1]],
+    [[ 0.5, 0.5,-0.5], [0,0,-1]],
+    // +X right
+    [[ 0.5,-0.5, 0.5], [1,0,0]],
+    [[ 0.5,-0.5,-0.5], [1,0,0]],
+    [[ 0.5, 0.5,-0.5], [1,0,0]],
+    [[ 0.5,-0.5, 0.5], [1,0,0]],
+    [[ 0.5, 0.5,-0.5], [1,0,0]],
+    [[ 0.5, 0.5, 0.5], [1,0,0]],
+    // -X left
+    [[-0.5,-0.5,-0.5], [-1,0,0]],
+    [[-0.5,-0.5, 0.5], [-1,0,0]],
+    [[-0.5, 0.5, 0.5], [-1,0,0]],
+    [[-0.5,-0.5,-0.5], [-1,0,0]],
+    [[-0.5, 0.5, 0.5], [-1,0,0]],
+    [[-0.5, 0.5,-0.5], [-1,0,0]],
+    // +Y top
+    [[-0.5, 0.5, 0.5], [0,1,0]],
+    [[ 0.5, 0.5, 0.5], [0,1,0]],
+    [[ 0.5, 0.5,-0.5], [0,1,0]],
+    [[-0.5, 0.5, 0.5], [0,1,0]],
+    [[ 0.5, 0.5,-0.5], [0,1,0]],
+    [[-0.5, 0.5,-0.5], [0,1,0]],
+    // -Y bottom
+    [[-0.5,-0.5,-0.5], [0,-1,0]],
+    [[ 0.5,-0.5,-0.5], [0,-1,0]],
+    [[ 0.5,-0.5, 0.5], [0,-1,0]],
+    [[-0.5,-0.5,-0.5], [0,-1,0]],
+    [[ 0.5,-0.5, 0.5], [0,-1,0]],
+    [[-0.5,-0.5, 0.5], [0,-1,0]],
+  ];
+  const verts = [];
+  for (const [p, n] of faces) verts.push(...p, ...n);
+  return new Float32Array(verts);
+})();
+
+const cubeBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuf);
+gl.bufferData(gl.ARRAY_BUFFER, cubeData, gl.STATIC_DRAW);
+
+function bindCube() {
+  gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuf);
+  const stride = 6 * 4; // 6 floats × 4 bytes
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos,  3, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(aNorm);
+  gl.vertexAttribPointer(aNorm, 3, gl.FLOAT, false, stride, 3 * 4);
+}
+
+// ── Matrix helpers ───────────────────────────────────────────
+function identity() {
+  return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+}
+
+function multiply(a, b) {
+  const out = new Float32Array(16);
+  for (let i = 0; i < 4; i++)
+    for (let j = 0; j < 4; j++)
+      for (let k = 0; k < 4; k++)
+        out[i*4+j] += a[i*4+k] * b[k*4+j];
+  return out;
+}
+
+function translate(tx, ty, tz) {
+  const m = identity();
+  m[12] = tx; m[13] = ty; m[14] = tz;
+  return m;
+}
+
+function scale(sx, sy, sz) {
+  const m = identity();
+  m[0] = sx; m[5] = sy; m[10] = sz;
+  return m;
+}
+
+function rotateY(a) {
+  const m = identity();
+  m[0]  =  Math.cos(a); m[2]  = Math.sin(a);
+  m[8]  = -Math.sin(a); m[10] = Math.cos(a);
+  return m;
+}
+
+// ── Normal matrix (inverse transpose of upper-left 3×3) ──────
+function normalMatrix(model) {
+  // Extract 3×3, compute inverse-transpose (for uniform scaling it equals the rotation part)
+  const [a0,a1,a2,,a4,a5,a6,,a8,a9,a10] = model;
+  const det = a0*(a5*a10-a6*a9) - a1*(a4*a10-a6*a8) + a2*(a4*a9-a5*a8);
+  const inv = 1/det;
+  return new Float32Array([
+    (a5*a10-a6*a9)*inv,  -(a1*a10-a2*a9)*inv,  (a1*a6-a2*a5)*inv,
+    -(a4*a10-a6*a8)*inv,  (a0*a10-a2*a8)*inv, -(a0*a6-a2*a4)*inv,
+    (a4*a9 -a5*a8)*inv,  -(a0*a9 -a1*a8)*inv,  (a0*a5-a1*a4)*inv,
+  ]);
+}
+
+// ── PERSPECTIVE PROJECTION MATRIX ───────────────────────────
+// Lines below define the viewing volume (frustum) parameters.
+//
+//  fovy   : vertical field of view in RADIANS  ← viewing volume height
+//  aspect : width / height ratio               ← viewing volume width
+//  near   : near clip plane distance (> 0)     ← front of frustum
+//  far    : far  clip plane distance           ← back  of frustum
+//
+// Together (fovy, aspect, near, far) fully describe the
+// truncated-pyramid viewing frustum in eye space.
+//
+// The resulting column-major 4×4 matrix transforms eye-space
+// vertices into clip space. After the perspective divide (÷w),
+// visible geometry falls within NDC [-1,1]³.
+//
+// Key matrix entries:
+//   m[0]  = f/aspect   — horizontal FOV scaling
+//   m[5]  = f          — vertical FOV scaling  (f = 1/tan(fovy/2))
+//   m[10] = (far+near)/(near−far)  — depth remapping
+//   m[11] = −1         — copies −z into w  → enables perspective divide
+//   m[14] = 2·far·near/(near−far)  — depth translation
+// ─────────────────────────────────────────────────────────────
+function perspectiveMatrix(fovy, aspect, near, far) {
+  const f   = 1.0 / Math.tan(fovy / 2);          // cotangent of half-FOV
+  const nf  = 1.0 / (near - far);
+  const m   = new Float32Array(16);               // column-major
+  m[0]  = f / aspect;                             // ← VIEWING VOLUME (horizontal)
+  m[5]  = f;                                      // ← VIEWING VOLUME (vertical)
+  m[10] = (far + near) * nf;                      // ← VIEWING VOLUME (depth remap)
+  m[11] = -1;                                     // ← PERSPECTIVE DIVIDE trigger
+  m[14] = 2 * far * near * nf;                    // ← VIEWING VOLUME (depth offset)
+  return m;
+}
+
+// ── Look-at (view matrix) ────────────────────────────────────
+function lookAt(eye, center, up) {
+  const norm = v => { const l=Math.hypot(...v); return v.map(x=>x/l); };
+  const cross = ([ax,ay,az],[bx,by,bz]) => [ay*bz-az*by, az*bx-ax*bz, ax*by-ay*bx];
+  const dot   = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const f = norm(center.map((c,i)=>c-eye[i]));
+  const r = norm(cross(f, up));
+  const u = cross(r, f);
+  const m = new Float32Array(16);
+  m[0]=r[0]; m[4]=r[1]; m[8]=r[2];   m[12]=-dot(r,eye);
+  m[1]=u[0]; m[5]=u[1]; m[9]=u[2];   m[13]=-dot(u,eye);
+  m[2]=-f[0];m[6]=-f[1];m[10]=-f[2]; m[14]= dot(f,eye);
+  m[3]=0;    m[7]=0;    m[11]=0;      m[15]=1;
+  return m;
+}
+
+// ── City block definitions ───────────────────────────────────
+// Each entry: { tx, ty, tz, sx, sy, sz, color, emissive, label }
+// All instances are drawn using the SINGLE cube mesh above.
+// ty is set so buildings sit on the ground (y = sy/2).
+const buildings = [
+  // ── Central skyscraper — near-black steel, acid-yellow trim
+  { tx:  0.0, sy: 9.0, tz:  0.0, sx: 1.2, sz: 1.2,
+    color:[0.04,0.04,0.06], emissive:[0.85,1.0,0.0]   },
+  // ── Tower A — deep charcoal, hot magenta
+  { tx:  3.0, sy: 6.5, tz:  0.5, sx: 1.0, sz: 1.0,
+    color:[0.05,0.02,0.06], emissive:[1.0,0.05,0.55]  },
+  // ── Tower B — dark slate, electric cyan
+  { tx: -3.2, sy: 5.5, tz:  0.2, sx: 1.1, sz: 1.1,
+    color:[0.02,0.04,0.07], emissive:[0.0,0.95,1.0]   },
+  // ── Block C — near-black, violent orange-red
+  { tx:  2.0, sy: 3.5, tz: -2.5, sx: 1.3, sz: 1.3,
+    color:[0.06,0.02,0.02], emissive:[1.0,0.28,0.0]   },
+  // ── Block D — very dark purple, toxic violet
+  { tx: -2.2, sy: 3.0, tz: -2.2, sx: 1.5, sz: 1.0,
+    color:[0.05,0.02,0.08], emissive:[0.6,0.0,1.0]    },
+  // ── Slab E — dark grey-blue, icy cyan
+  { tx:  4.5, sy: 2.0, tz: -1.5, sx: 2.2, sz: 1.4,
+    color:[0.03,0.04,0.07], emissive:[0.0,0.75,1.0]   },
+  // ── Squat F — almost black, lurid pink
+  { tx: -4.5, sy: 1.8, tz:  1.0, sx: 1.8, sz: 1.6,
+    color:[0.06,0.02,0.05], emissive:[1.0,0.0,0.48]   },
+  // ── Tower G — dark, neon ultraviolet purple
+  { tx:  1.5, sy: 4.5, tz:  3.5, sx: 0.9, sz: 0.9,
+    color:[0.04,0.01,0.07], emissive:[0.72,0.0,1.0]   },
+  // ── Tower H — near-black, deep magenta
+  { tx: -1.8, sy: 4.0, tz:  3.8, sx: 0.85,sz: 0.85,
+    color:[0.05,0.02,0.06], emissive:[0.9,0.1,0.8]    },
+  // ── Background slab I — very dark, indigo-blue
+  { tx:  0.0, sy: 3.0, tz: -4.5, sx: 3.5, sz: 1.0,
+    color:[0.03,0.03,0.08], emissive:[0.2,0.5,1.0]    },
+  // ── Accent block J — black, acid yellow
+  { tx:  5.2, sy: 1.2, tz:  2.0, sx: 1.0, sz: 1.0,
+    color:[0.04,0.04,0.02], emissive:[0.9,1.0,0.0]    },
+  // ── Ground plane — handled by grid shader
+  { tx:  0.0, sy: 0.2, tz:  0.0, sx: 20.0, sz: 20.0,
+    color:[0.0,0.0,0.0], emissive:[0.0,0.0,0.0], isGround: true },
+];
+
+// Ground surface is defined at y = 0.
+// For each building: the cube is centred at origin, so to place
+// the bottom face on y=0 we translate up by half the height: ty = sy/2.
+// For the ground slab: its TOP face should be at y=0, so ty = -sy/2.
+buildings.forEach((b, i) => {
+  const isGround = (i === buildings.length - 1);
+  b.ty = isGround ? -(b.sy / 2) : (b.sy / 2);
+});
+
+// ── Orbit camera state ───────────────────────────────────────
+let yaw = 0.45, pitch = 0.28, zoom = 14;
+let dragging = false, lastX = 0, lastY = 0;
+
+canvas.addEventListener('mousedown', e => { dragging=true; lastX=e.clientX; lastY=e.clientY; });
+canvas.addEventListener('mouseup',   ()=> dragging=false);
+canvas.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  yaw   += (e.clientX - lastX) * 0.005;
+  pitch += (e.clientY - lastY) * 0.005;
+  pitch  = Math.max(-1.2, Math.min(1.2, pitch));
+  lastX = e.clientX; lastY = e.clientY;
+});
+canvas.addEventListener('wheel', e => {
+  zoom += e.deltaY * 0.02;
+  zoom = Math.max(5, Math.min(30, zoom));
+});
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  dragging=true;
+  lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+});
+canvas.addEventListener('touchend', ()=> dragging=false);
+canvas.addEventListener('touchmove', e => {
+  if (!dragging) return;
+  yaw   += (e.touches[0].clientX - lastX) * 0.007;
+  pitch += (e.touches[0].clientY - lastY) * 0.007;
+  pitch  = Math.max(-1.2, Math.min(1.2, pitch));
+  lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+});
+
+// ── Render loop ──────────────────────────────────────────────
+gl.enable(gl.DEPTH_TEST);
+gl.depthFunc(gl.LEQUAL);
+gl.enable(gl.CULL_FACE);
+
+let startTime = performance.now();
+
+function render(now) {
+  requestAnimationFrame(render);
+  const t = (now - startTime) * 0.001;
+
+  gl.clearColor(0.01, 0.0, 0.04, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  // ── PERSPECTIVE PROJECTION ─────────────────────────────────
+  // fovy=55°, aspect=canvas w/h, near=0.1, far=100
+  // These four values define the VIEWING VOLUME (frustum).
+  const aspect = canvas.width / canvas.height;
+  const proj = perspectiveMatrix(
+    55 * Math.PI / 180,  // fovy  — viewing volume vertical angle
+    aspect,              // aspect— viewing volume width/height ratio
+    0.1,                 // near  — front face of frustum
+    100.0                // far   — back  face of frustum
+  );
+
+  // ── Orbit camera ──────────────────────────────────────────
+  const cx = zoom * Math.sin(yaw) * Math.cos(pitch);
+  const cy = zoom * Math.sin(pitch) + 2;
+  const cz = zoom * Math.cos(yaw) * Math.cos(pitch);
+  const view = lookAt([cx,cy,cz], [0,2,0], [0,1,0]);
+
+  gl.uniformMatrix4fv(uProj, false, proj);
+  gl.uniformMatrix4fv(uView, false, view);
+  gl.uniform1f(uTime, t);
+
+  bindCube();
+
+  // ── Draw all buildings using the SINGLE cube mesh ──────────
+  buildings.forEach((b, idx) => {
+    // Build model matrix directly in column-major order.
+    // This is T*S: scale the unit cube axes, then place it at world position.
+    // Column-major layout: m[col*4 + row]
+    // col0=Xaxis, col1=Yaxis, col2=Zaxis, col3=translation
+    const model = new Float32Array([
+      b.sx,  0,     0,     0,   // col 0
+      0,     b.sy,  0,     0,   // col 1
+      0,     0,     b.sz,  0,   // col 2
+      b.tx,  b.ty,  b.tz,  1,   // col 3 — world-space translation
+    ]);
+    const nm = normalMatrix(model);
+
+    gl.uniformMatrix4fv(uModel,   false, model);
+    gl.uniformMatrix3fv(uNormMat, false, nm);
+    gl.uniform3fv(uColor,    b.color);
+    gl.uniform3fv(uEmissive, b.emissive);
+    gl.uniform1i(uBldIdx, idx);
+    gl.uniform1i(uIsGround, b.isGround ? 1 : 0);
+
+    // 36 vertices = 12 triangles = 6 faces of the cube
+    gl.drawArrays(gl.TRIANGLES, 0, 36);
+  });
+}
+
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

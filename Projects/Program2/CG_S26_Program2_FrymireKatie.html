@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="gl-canvas" width="512" height="512"> </canvas>
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+#version 300 es
+#define MAX_LIGHTS 10
+
+in vec4 aPosition;
+in vec4 aNormal;
+out vec3 vN;
+out vec3 vE;
+out vec3 vL[MAX_LIGHTS];
+
+uniform int uNumLightsV;
+uniform vec4 uLightPosition[MAX_LIGHTS];
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+uniform mat3 uNMatrix;
+
+void main() {
+    vec3 pos = (uModelViewMatrix * aPosition).xyz;
+
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+        if(i >= uNumLightsV) break;
+        vL[i] = normalize(uLightPosition[i].xyz - pos);
+    }
+
+    vE = -pos;
+    vN = normalize(uNMatrix * aNormal.xyz);
+
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+}
+</script>
+
+<script id="fragment-shader-hills" type="x-shader/x-fragment">
+#version 300 es
+#define MAX_LIGHTS 10
+precision mediump float;
+uniform int uNumLightsF;
+
+uniform vec4 uAmbientProduct[MAX_LIGHTS];
+uniform vec4 uDiffuseProduct[MAX_LIGHTS];
+uniform vec4 uSpecularProduct[MAX_LIGHTS];
+uniform float uShininess;
+
+in vec3 vN;
+in vec3 vE;
+in vec3 vL[MAX_LIGHTS];
+
+out vec4 fColor;
+
+void main() { 
+    vec4 color = vec4(0.0);
+    vec3 N = normalize(vN);
+    vec3 E = normalize(vE);
+
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+        if(i >= uNumLightsF) break;
+
+        vec3 H = normalize(vL[i] + vE);
+        vec4 ambient = uAmbientProduct[i];
+
+        float Kd = max(dot(vL[i], vN), 0.0);
+        vec4 diffuse = Kd * uDiffuseProduct[i];
+        
+        float Ks = pow(max(dot(vN, H), 0.0), uShininess);
+        vec4 specular = Ks * uSpecularProduct[i];
+        
+        if(dot(vL[i], vN) < 0.0){
+            specular = vec4(0.0);
+        }
+        color += ambient + diffuse + specular;
+    }
+    fColor = color;
+    fColor.a = 1.0;
+ 
+}
+</script>
+
+<script id="fragment-shader-man" type="x-shader/x-fragment">
+#version 300 es
+#define MAX_LIGHTS 10
+precision mediump float;
+uniform int uNumLightsF;
+
+uniform vec4 uAmbientProduct[MAX_LIGHTS];
+uniform vec4 uDiffuseProduct[MAX_LIGHTS];
+uniform vec4 uSpecularProduct[MAX_LIGHTS];
+uniform float uShininess;
+
+in vec3 vN;
+in vec3 vE;
+in vec3 vL[MAX_LIGHTS];
+
+out vec4 fColor;
+
+void main() { 
+    vec4 color = vec4(0.0);
+    vec3 N = normalize(vN);
+    vec3 E = normalize(vE);
+
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+        if(i >= uNumLightsF) break;
+
+        vec3 H = normalize(vL[i] + vE);
+        vec4 ambient = uAmbientProduct[i];
+
+        float Kd = max(dot(vL[i], vN), 0.0);
+        vec4 diffuse = Kd * uDiffuseProduct[i];
+        
+        float Ks = pow(max(dot(vN, H), 0.0), uShininess);
+
+        vec4 specular = Ks * uSpecularProduct[i];
+        color += ambient + diffuse + specular;
+
+    }
+    fColor = color;
+    fColor.a = 1.0;
+ 
+}
+</script>
+
+<p> </p>
+<button id = "Button0">Zoom out</button>
+<button id = "Button1">Zoom in</button>
+
+<p> </p>
+<button id = "Button2">Increase theta</button>
+<button id = "Button3">Decrease theta</button>
+<button id = "Button4">Increase phi</button>
+<button id = "Button5">Decrease phi</button>
+<p> </p>
+
+<div>
+Upper arm  <input id="slider2" type="range"
+ min="-180" max="180" step="10" value="0"
+  />
+</div><br/>
+
+<div>
+ Forearm <input id="slider3" type="range"
+ min="-180" max="180" step="10" value="0"
+  />
+</div><br/>
+
+<br/>
+
+Waving <input id="waveCheckbox" type="checkbox" />
+
+
+<script src="../../Common/initShaders.js"></script>
+<script src="../../Common/MVnew.js"></script>
+<script src="CG_S26_FrymireKatie_initShaders.js"></script>      <!--this is for when i submit it -->
+<script src="CG_S26_FrymireKatie_MVnew.js"></script>            <!-- this is for when i submit it -->
+<script src="CG_S26_Program2_FrymireKatie.js"></script>
+
+</body>
+</html>

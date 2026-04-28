@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="assets/style.css">
+    </head>
+<body>
+
+    <div class="canvas-row">
+        <div>
+            <canvas id="gl-canvas" width="512" height="512"></canvas>
+        </div>
+        
+        <div>
+            <div class="panel-row">
+                <div>
+                    <h2>Instructions</h2>
+                    <hr>
+                    <p> Use the WASD to move the figure</p>
+                    <p> Use ↑ ↓ ← → to orbit the camera. <br> <i>This will also rotate the man <br> as he walks.</i> </p>
+                </div>
+                <div class="vl"></div>
+                <div>
+                    <h2>Controls</h2>
+                    <hr>
+                    <button id = "Button0">Zoom out</button>
+                    <button id = "Button1">Zoom in</button>
+                    <p id="label"> Time of Day</p>
+                    <div class="row">
+                        <label class="switch">
+                            <input type="checkbox" id="skySwitch">
+                            <span class="slider round"></span>
+                        </label>
+                        <div class="status" id="skyStatus">Day</div>
+                    </div>
+                    <script>
+                        const skySwitch = document.getElementById('skySwitch');
+                        const skyStatus = document.getElementById('skyStatus');
+
+                        skySwitch.addEventListener('change', (e) => {
+                            skyStatus.textContent = skySwitch.checked ? 'Night': 'Day';
+                        });
+                    </script>
+
+                    <p id="label">Waving</p>
+                    <div class="row">
+                        <label class="switch">
+                            <input type="checkbox" id="waveSwitch">
+                            <span class="slider round"></span>
+                        </label>
+                        <div class="status" id="waveStatus">Not Waving</div>
+                    </div>
+                    <script>
+                        const isWaving = document.getElementById('waveSwitch');
+                        const waveStatus = document.getElementById('waveStatus');
+
+                        isWaving.addEventListener('change', (e) => {
+                            waveStatus.textContent = isWaving.checked ? 'Waving': 'Not Waving';
+                        });
+                    </script>
+
+                    <div class="row">
+                        <p>Shoulder Joint</p>
+                        <input id="slider2" type="range" min="-80" max="30" step="10" value="0"/>
+                    </div>
+
+                    <div class="row">
+                        <p>Elbow Joint</p>
+                        <input id="slider3" type="range" min="-160" max="150" step="10" value="0"/>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+            #version 300 es
+            #define MAX_LIGHTS 10
+
+            in vec4 aPosition;
+            in vec4 aNormal;
+            in vec2 aTexCoord;
+
+            out vec3 vN;
+            out vec3 vE;
+            out vec3 vL[MAX_LIGHTS];
+            out vec2 vTexCoord;
+
+            uniform int uNumLightsV;
+            uniform vec4 uLightPosition[MAX_LIGHTS];
+            uniform mat4 uModelViewMatrix;
+            uniform mat4 uProjectionMatrix;
+            uniform mat3 uNMatrix;
+
+            void main() {
+                vec3 pos = (uModelViewMatrix * aPosition).xyz;
+
+                for(int i = 0; i < MAX_LIGHTS; i++) {
+                    if(i >= uNumLightsV) break;
+                    vL[i] = normalize(uLightPosition[i].xyz - pos);
+                }
+
+                vE = -pos;
+                vN = normalize(uNMatrix * aNormal.xyz);
+
+                vTexCoord = aTexCoord.st;
+                gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+            }
+    </script>
+
+    <script id="vertex-shader-sky" type="x-shader/x-vertex">
+        #version 300 es
+        in vec4 aPosition;
+        out vec3 vTexCoord;
+        uniform mat4 uViewProj;
+
+        void main() {
+            vTexCoord  = aPosition.xyz;
+            vec4 pos = uViewProj * aPosition;
+            gl_Position = pos.xyww; 
+        }
+    </script>
+
+    <script id="fragment-shader-hills" type="x-shader/x-fragment">
+    #version 300 es
+    #define MAX_LIGHTS 10
+    precision mediump float;
+    uniform int uNumLightsF;
+
+    uniform vec4 uAmbientProduct[MAX_LIGHTS];
+    uniform vec4 uDiffuseProduct[MAX_LIGHTS];
+    uniform vec4 uSpecularProduct[MAX_LIGHTS];
+    uniform float uShininess;
+
+    in vec2 vTexCoord;
+    uniform sampler2D uTexture;
+
+
+    in vec3 vN;
+    in vec3 vE;
+    in vec3 vL[MAX_LIGHTS];
+
+    uniform samplerCube uSkybox;
+    uniform int uIsNight;
+
+    out vec4 fColor;
+
+    void main() { 
+        vec4 color = vec4(0.0);
+        vec3 N = normalize(vN);
+        vec3 E = normalize(vE);
+
+        for(int i = 0; i < MAX_LIGHTS; i++) {
+            if(i >= uNumLightsF) break;
+
+            vec3 H = normalize(vL[i] + vE);
+            vec4 ambient = uAmbientProduct[i];
+
+            float Kd = max(dot(vL[i], vN), 0.0);
+            vec4 diffuse = Kd * uDiffuseProduct[i];
+            
+            float Ks = pow(max(dot(vN, H), 0.0), uShininess);
+            vec4 specular = Ks * uSpecularProduct[i];
+            
+            if(dot(vL[i], vN) < 0.0){
+                specular = vec4(0.0);
+            }
+            color += ambient + diffuse + specular;
+        }
+
+        vec4 texColor = vec4(texture( uTexture, vTexCoord).rgb, 1.0);
+        vec3 R = reflect(-normalize(vE), normalize(vN));
+        vec4 envColor = texture(uSkybox, R);
+        float reflectStrength = 0.1;
+        vec3 lit = color.rgb * texColor.rgb;
+        fColor = vec4(mix(lit, envColor.rgb, reflectStrength), 1.0);
+    
+    }
+    </script>
+
+    <script id="fragment-shader-man" type="x-shader/x-fragment">
+    #version 300 es
+    #define MAX_LIGHTS 10
+    precision mediump float;
+    uniform int uNumLightsF;
+
+    uniform vec4 uAmbientProduct[MAX_LIGHTS];
+    uniform vec4 uDiffuseProduct[MAX_LIGHTS];
+    uniform vec4 uSpecularProduct[MAX_LIGHTS];
+    uniform float uShininess;
+
+    in vec3 vN;
+    in vec3 vE;
+    in vec3 vL[MAX_LIGHTS];
+
+    out vec4 fColor;
+
+    uniform samplerCube uSkybox;
+    uniform int uIsNight;
+
+    void main() { 
+        vec4 color = vec4(0.0);
+        vec3 N = normalize(vN);
+        vec3 E = normalize(vE);
+
+        for(int i = 0; i < MAX_LIGHTS; i++) {
+            if(i >= uNumLightsF) break;
+
+            vec3 H = normalize(vL[i] + vE);
+            vec4 ambient = uAmbientProduct[i];
+
+            float Kd = max(dot(vL[i], vN), 0.0);
+            vec4 diffuse = Kd * uDiffuseProduct[i];
+            
+            float Ks = pow(max(dot(vN, H), 0.0), uShininess);
+
+            vec4 specular = Ks * uSpecularProduct[i];
+            color += ambient + diffuse + specular;
+
+        }
+
+        vec3 R = reflect(-normalize(vE), normalize(vN));
+        vec4 envColor = texture(uSkybox, R);
+        float reflectStrength = 0.2;
+        
+        fColor = vec4(mix(color.rgb, envColor.rgb, reflectStrength), 1.0);
+    }
+    </script>
+
+    <script id="fragment-shader-sky" type="x-shader/x-fragment">
+        #version 300 es
+        precision mediump float;
+        in vec3 vTexCoord;
+        uniform samplerCube uSkybox;
+        out vec4 fColor;
+
+        void main() {
+            fColor = texture(uSkybox, normalize(vTexCoord));
+        }
+    </script>
+
+    <img id="grass" src="assets/grass.jpg" hidden>
+
+    <script src="../../Common/initShaders.js"></script>
+    <script src="../../Common/MVnew.js"></script>
+    <!-- <script src="CG_S26_FrymireKatie_initShaders.js"></script>      this is for when i submit it -->
+    <!-- <script src="CG_S26_FrymireKatie_MVnew.js"></script>            this is for when i submit it -->
+    <script src="CG_S26_Program3_FrymireKatie.js"></script>
+</body>
+</html>

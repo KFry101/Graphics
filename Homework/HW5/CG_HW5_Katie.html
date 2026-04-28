@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="gl-canvas" width="512" height="512"> </canvas>
+
+<script id="cook-torrance-vertex-shader" type="x-shader/x-vertex">
+#version 300 es
+
+#define MAX_LIGHTS 10
+
+uniform int uNumLightsV;
+
+in vec4 aPosition;
+in vec4 aNormal;
+
+uniform vec4 uLightPosition[MAX_LIGHTS];
+
+out vec3 vN;
+out vec3 vE;
+out vec3 vL[MAX_LIGHTS];
+
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+
+void main(){
+    vec3 pos = (uModelViewMatrix * aPosition).xyz;
+
+    vE = -pos;
+    vN = normalize((uModelViewMatrix * aNormal).xyz);
+
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+        if(i >= uNumLightsV) break;
+        vec3 light = uLightPosition[i].xyz;
+        vL[i] = normalize(light - pos);
+    }
+
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+}
+
+</script>
+
+<script id="cook-torrance-fragment-shader" type="x-shader/x-fragment">
+#version 300 es
+precision mediump float;
+
+
+#define MAX_LIGHTS 10
+
+uniform int uNumLightsF;
+
+uniform vec4 uAmbientProduct[MAX_LIGHTS];
+uniform vec4 uDiffuseProduct[MAX_LIGHTS];
+uniform vec4 uSpecularProduct[MAX_LIGHTS];
+
+uniform float uShininess;
+uniform float uF0;
+
+in vec3 vN;
+in vec3 vE;
+in vec3 vL[MAX_LIGHTS];
+out vec4 fColor;
+
+void main(){ 
+    vec3 N = normalize(vN);
+    vec3 V = normalize(vE);
+
+    vec3 finalColor = vec3(0.0);
+
+    float roughness = sqrt(2.0 / (uShininess + 2.0));
+
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+        if(i >= uNumLightsF) break;
+
+        vec3 L = normalize(vL[i]);
+        vec3 H = normalize(L + V);
+
+        float NdotL = max(dot(N, L), 0.0);
+        float NdotH = max(dot(N, H), 0.0);
+        float NdotV = max(dot(N, V), 0.0);
+        float VdotH = max(dot(V, H), 0.0);
+
+        // --- D (GGX) ---
+        float a2 = pow(roughness, 4.0);
+        float denom = (NdotH * NdotH) * (a2 - 1.0) + 1.0;
+        float D = a2 / (3.14159 * denom * denom);
+
+        // --- G (Smith) ---
+        float k = pow(roughness + 1.0, 2.0) / 8.0;
+        float G1L = NdotL / (NdotL * (1.0 - k) + k);
+        float G1V = NdotV / (NdotV * (1.0 - k) + k);
+        float G = G1L * G1V;
+
+        // --- F (Schlick) ---
+        float F = uF0 + (1.0 - uF0) * pow(1.0 - VdotH, 5.0);
+
+        // --- Cook-Torrance ---
+        float spec = (D * G * F) / max(4.0 * NdotL * NdotV, 0.001);
+
+        
+        vec3 diffuse = uDiffuseProduct[i].rgb;
+
+        vec3 specular = spec * uSpecularProduct[i].rgb;
+
+        finalColor += uAmbientProduct[i].rgb;
+        finalColor += (diffuse + specular) * NdotL;
+    }
+
+    fColor = vec4(finalColor, 1.0);
+}
+</script>
+
+<script id="gouraud-vertex-shader" type="x-shader/x-vertex">
+#version 300 es
+#define MAX_LIGHTS 10
+
+in vec4 aPosition;
+in vec4 aNormal;
+
+out vec4 vColor;
+
+uniform int uNumLightsV;
+
+uniform vec4 uLightPosition[MAX_LIGHTS];
+uniform vec4 uAmbientProduct[MAX_LIGHTS];
+uniform vec4 uDiffuseProduct[MAX_LIGHTS];
+uniform vec4 uSpecularProduct[MAX_LIGHTS];
+
+uniform float uShininess;
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+void main() {
+    vec3 pos = (uModelViewMatrix * aPosition).xyz;
+    vec3 E = normalize(-pos);
+    vec3 N = normalize((uModelViewMatrix * aNormal).xyz);
+
+    vec4 color = vec4(0.0);
+
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+        if(i >= uNumLightsV) break;
+
+        vec3 L = normalize(uLightPosition[i].xyz - pos);
+        vec3 R = normalize(reflect(-L, N));
+
+        vec4 ambient = uAmbientProduct[i];
+
+        float Kd = max(dot(L, N), 0.0);
+        vec4 diffuse = Kd * uDiffuseProduct[i];
+
+        float Ks = pow(max(dot(R, E), 0.0), uShininess);
+        vec4 specular = Ks * uSpecularProduct[i];
+        if(dot(L, N) < 0.0){
+            specular = vec4(0.0);
+        }
+
+        color += ambient + diffuse + specular;
+    }
+    vColor = color;
+    vColor.a = 1.0;
+
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+}
+</script>
+
+<script id="gouraud-fragment-shader" type="x-shader/x-fragment">
+#version 300 es
+
+precision mediump float;
+
+in vec4 vColor;
+out vec4 fColor;
+
+void main()
+{
+    fColor = vColor;
+}
+</script>
+
+<script id="blinn-phong-vertex-shader" type="x-shader/x-vertex">
+#version 300 es
+#define MAX_LIGHTS 10
+
+in vec4 aPosition;
+in vec4 aNormal;
+out vec3 vN;
+out vec3 vE;
+out vec3 vL[MAX_LIGHTS];
+
+uniform int uNumLightsV;
+uniform vec4 uLightPosition[MAX_LIGHTS];
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+
+void main() {
+    vec3 pos = (uModelViewMatrix * aPosition).xyz;
+    vE = -pos;
+    vN = normalize((uModelViewMatrix * aNormal).xyz);
+
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+        if(i >= uNumLightsV) break;
+        vL[i] = normalize(uLightPosition[i].xyz - pos);
+    }
+
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+}
+</script>
+
+<script id="blinn-phong-fragment-shader" type="x-shader/x-fragment">
+#version 300 es
+#define MAX_LIGHTS 10
+precision mediump float;
+uniform int uNumLightsF;
+
+uniform vec4 uAmbientProduct[MAX_LIGHTS];
+uniform vec4 uDiffuseProduct[MAX_LIGHTS];
+uniform vec4 uSpecularProduct[MAX_LIGHTS];
+uniform float uShininess;
+
+in vec3 vN;
+in vec3 vE;
+in vec3 vL[MAX_LIGHTS];
+
+out vec4 fColor;
+
+void main() { 
+    vec3 N = normalize(vN);
+    vec3 V = normalize(vE);
+    vec4 color = vec4(0.0);
+
+    for(int i = 0; i < MAX_LIGHTS; i++) {
+        if(i >= uNumLightsF) break;
+
+        vec3 L = normalize(vL[i]);
+        vec3 H = normalize(L + V);
+
+        vec4 ambient = uAmbientProduct[i];
+
+        float Kd = max(dot(L, N), 0.0);
+        vec4 diffuse = Kd * uDiffuseProduct[i];
+
+        float Ks = pow(max(dot(H, N), 0.0), uShininess);
+        vec4 specular = Ks * uSpecularProduct[i];
+        if(dot(L, N) < 0.0){
+            specular = vec4(0.0);
+        }
+
+        color += ambient + diffuse + specular;
+    }
+
+    fColor = color;
+    fColor.a = 1.0;
+}
+</script>
+
+<p> </p>
+<button id = "Button0">Increase R</button>
+<button id = "Button1">Decrease R</button>
+
+<p> </p>
+<button id = "Button2">Increase theta</button>
+<button id = "Button3">Decrease theta</button>
+<button id = "Button4">Increase phi</button>
+<button id = "Button5">Decrease phi</button>
+<p> </p>
+<button id = "Button6">Increase Subdivisions</button>
+<button id = "Button7">Decrease Subdivisions</button>
+
+<p></p>
+<select id="shading">
+  <option value="blinnPhong">Blinn-Phong Shading</option>
+  <option value="gouraud">Gouraud Shading</option>
+  <option value="cookTorrance" selected>Cook-Torrance Shading</option>
+</select>
+<p></p>
+
+<script src="../../Common/initShaders.js"></script>
+<script src="../../Common/MVnew.js"></script>
+<script src="initShaders.js"></script>
+<script src="MVnew.js"></script>
+<script src="CG_HW5_Katie.js"></script>
+
+</body>
+</html>

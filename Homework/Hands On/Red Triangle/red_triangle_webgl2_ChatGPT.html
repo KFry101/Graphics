@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WebGL2 Red Isosceles Triangle</title>
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #f0f0f0;
+    font-family: sans-serif;
+  }
+  canvas {
+    border: 1px solid black;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="glCanvas" width="400" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("glCanvas");
+const gl = canvas.getContext("webgl2");
+
+if (!gl) {
+    alert("WebGL2 is not supported by your browser.");
+}
+
+// Vertex Shader (OpenGL ES 3.0)
+const vertexShaderSource = `#version 300 es
+in vec2 aPosition;
+
+void main() {
+    gl_Position = vec4(aPosition, 0.0, 1.0);
+}
+`;
+
+// Fragment Shader (Red color)
+const fragmentShaderSource = `#version 300 es
+precision mediump float;
+out vec4 fragColor;
+
+void main() {
+    fragColor = vec4(1.0, 0.0, 0.0, 1.0); // Red
+}
+`;
+
+function createShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+    }
+    return shader;
+}
+
+const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+// Create program
+const program = gl.createProgram();
+gl.attachShader(program, vertexShader);
+gl.attachShader(program, fragmentShader);
+gl.linkProgram(program);
+
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error(gl.getProgramInfoLog(program));
+}
+
+// Triangle geometry (clip space)
+// Canvas: 400x400
+// Height: 200px -> top at +100px, bottom at -100px
+// Base: 150px -> ±75px
+// Convert pixels to clip space (divide by half canvas size = 200)
+
+const vertices = new Float32Array([
+     0.0,   0.5,    // Top vertex (0, +100px)
+    -0.375, -0.5,   // Bottom left (-75px, -100px)
+     0.375, -0.5    // Bottom right (+75px, -100px)
+]);
+
+const vao = gl.createVertexArray();
+gl.bindVertexArray(vao);
+
+const buffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+const positionLoc = gl.getAttribLocation(program, "aPosition");
+gl.enableVertexAttribArray(positionLoc);
+gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
+
+gl.bindVertexArray(null);
+
+// Render
+gl.viewport(0, 0, canvas.width, canvas.height);
+gl.clearColor(1.0, 1.0, 1.0, 1.0);
+gl.clear(gl.COLOR_BUFFER_BIT);
+
+gl.useProgram(program);
+gl.bindVertexArray(vao);
+gl.drawArrays(gl.TRIANGLES, 0, 3);
+</script>
+
+</body>
+</html>
