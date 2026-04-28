@@ -192,6 +192,7 @@
     uniform vec4 uSpecularProduct[MAX_LIGHTS];
     uniform float uShininess;
 
+    in vec2 vTexCoord;
     uniform sampler2D uTexture;
 
     in vec3 vN;
@@ -224,11 +225,12 @@
 
         }
 
+        vec4 texColor = vec4(texture( uTexture, vTexCoord).rgb, 1.0);
         vec3 R = reflect(-normalize(vE), normalize(vN));
         vec4 envColor = texture(uSkybox, R);
-        float reflectStrength = 0.2;
-        
-        fColor = vec4(mix(color.rgb, envColor.rgb, reflectStrength), 1.0);
+        float reflectStrength = 0.1;
+        vec3 lit = color.rgb * texColor.rgb;
+        fColor = vec4(mix(lit, envColor.rgb, reflectStrength), 1.0);
     }
     </script>
 

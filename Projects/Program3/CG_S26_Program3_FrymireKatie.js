@@ -14,12 +14,13 @@ var terrainNormals = [];
 var terrainTexCoords = [];
 var terrainVBuffer, terrainNBuffer, terrainTBuffer;
 var textureG;
-var imgG;
 
 
 var manPositions = [];
 var manNormals = [];
-var manVBuffer, manNBuffer;
+var manTexCoords = [];
+var manVBuffer, manNBuffer, manTbuffer;
+var textureF, textureB;
 
 
 var skyPositions = new Float32Array([
@@ -83,7 +84,7 @@ var modelViewMatrixLocT, projectionMatrixLocT, nMatrixLocT;
 var aPositionLocT, aNormalLocT, aTexCoordLocT;
 
 var modelViewMatrixLocM, projectionMatrixLocM, nMatrixLocM;
-var aPositionLocM, aNormalLocM;
+var aPositionLocM, aNormalLocM, aTexCoordLocM;
 
 var modelViewMatrixLocS, projectionMatrixLocS, nMatrixLocS;
 var aPositionLocS, aNormalLocS, aTexCoordLocS;
@@ -134,35 +135,52 @@ var waveAngle = 0.0;
 var walking   = false;
 var walkAngle = 0.0;
 //-----------------------------------------------------------------------------
-var numLights = 1;
+var numLights = 4;
 var lightPositions = [
-    vec4( 0,   3,  0,   1.0),   // white
-    vec4( 1,   1,  1,   1.0),   // blue
-    vec4(-1,   1,  1,   1.0),   // red
-    vec4(-1,   1, -1,   1.0),   // green
-    vec4( 1,   1, -1,   1.0)    // yellow
+    vec4( 5,   3,  5,   1.0),   // white
+    vec4(-5,   3,  -5,   1.0),   // white
+    vec4(5,   3,  -5,   1.0),   // white
+    vec4(-5,   3,  5,   1.0),   // white
 ];
 
 var dayLightAmbients = [
-    vec4(0.45, 0.35, 0.32, 1.0),   
+    vec4(0.25, 0.15, 0.12, 1.0),   
+    vec4(0.25, 0.15, 0.12, 1.0),
+    vec4(0.25, 0.15, 0.12, 1.0),   
+    vec4(0.25, 0.15, 0.12, 1.0),
 ];
 var dayLightDiffuses = [
     vec4(0.9, 0.9, 0.8, 1.0),   
+    vec4(0.9, 0.9, 0.8, 1.0),
+    vec4(0.9, 0.9, 0.8, 1.0),   
+    vec4(0.9, 0.9, 0.8, 1.0),
+    
 ];
 var dayLightSpeculars = [
+    vec4(0.9, 0.85, 0.7, 1.0), 
+    vec4(0.9, 0.85, 0.7, 1.0), 
+    vec4(0.9, 0.85, 0.7, 1.0), 
     vec4(0.9, 0.85, 0.7, 1.0),   
 ];
 
 var nightLightAmbients = [
-    vec4(0.22, 0.22, 0.25, 1.0),   
+    vec4(0.12, 0.12, 0.15, 1.0), 
+    vec4(0.12, 0.12, 0.15, 1.0),  
+    vec4(0.12, 0.12, 0.15, 1.0), 
+    vec4(0.12, 0.12, 0.15, 1.0),  
 ];
 var nightLightDiffuses = [
-    vec4(0.35, 0.35, 0.5, 1.0),   
+    vec4(0.35, 0.35, 0.5, 1.0),  
+    vec4(0.35, 0.35, 0.5, 1.0), 
+    vec4(0.35, 0.35, 0.5, 1.0),  
+    vec4(0.35, 0.35, 0.5, 1.0), 
 ];
 var nightLightSpeculars = [
-    vec4(0.3, 0.3, 0.5, 1.0),   
+    vec4(0.3, 0.3, 0.5, 1.0),  
+    vec4(0.3, 0.3, 0.5, 1.0), 
+    vec4(0.3, 0.3, 0.5, 1.0),  
+    vec4(0.3, 0.3, 0.5, 1.0), 
 ];
-
 
 var lightAmbients;
 var lightDiffuses;
@@ -276,6 +294,55 @@ function cube() {
     quad( 5, 4, 0, 1 );
 }
 
+function setTexcoords(gl) {
+  gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([
+        0, 0,
+        0, 1,
+        1, 1,
+        0, 0,
+        1, 1,
+        1, 0,
+
+        0, 0,
+        0.1, 0,
+        0.1, 0.1,
+        0, 0,
+        0.1, 0.1,
+        0, 0.1,
+
+
+        0, 0,
+        1.0, 0,
+        0.1, 0.1,
+        0, 0,
+        0.1, 0.1,
+        0, 0.1,
+
+        0, 0,
+        0.1, 0,
+        0.1, 0.1,
+        0, 0,
+        0.1, 0.1,
+        0, 0.1,
+
+        0, 0,
+        0.1, 0,
+        0.1, 0.1,
+        0, 0,
+        0.1, 0.1,
+        0, 0.1,
+
+        0, 0,
+        0.1, 0,
+        0.1, 0.1,
+        0, 0,
+        0.1, 0.1,
+        0, 0.1,
+      ]),
+      gl.STATIC_DRAW);
+}
 //---------------------------------------------------------------------------------
 function buildCubeMap(faceInfos, texture, textureUnit) {
     gl.activeTexture(textureUnit);
@@ -359,6 +426,7 @@ function init() {
     gl.useProgram(programM);
     aPositionLocM = gl.getAttribLocation(programM, "aPosition");
     aNormalLocM   = gl.getAttribLocation(programM, "aNormal");
+    aTexCoordLocM = gl.getAttribLocation(programM, "aTexCoord");
     modelViewMatrixLocM  = gl.getUniformLocation(programM, "uModelViewMatrix");
     projectionMatrixLocM = gl.getUniformLocation(programM, "uProjectionMatrix");
     nMatrixLocM          = gl.getUniformLocation(programM, "uNMatrix");
@@ -398,20 +466,6 @@ function init() {
 
     gl.bindVertexArray(null);
 
-    textureG = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, textureG);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([100, 255, 0, 255]));
-    imgG = new Image();
-    imgG.crossOrigin = "anonymous";
-    imgG.src = "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/grass.png";
-    
-    imgG.addEventListener('load', function(){
-        gl.bindTexture(gl.TEXTURE_2D, textureG );
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgG);
-        gl.generateMipmap(gl.TEXTURE_2D);
-    });
-
     //------------------------------------------------------------------------
     //SKYBOX 
     //------------------------------------------------------------------------
@@ -425,6 +479,56 @@ function init() {
     gl.vertexAttribPointer(aPositionLocS, 3, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(aPositionLocS);
     gl.bindVertexArray(null);
+    
+    //------------------------------------------------------------------------
+    //Man
+    //------------------------------------------------------------------------
+    manVBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, manVBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(manPositions), gl.STATIC_DRAW);
+
+    manNBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, manNBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(manNormals), gl.STATIC_DRAW);
+    
+    manTbuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, manTbuffer);
+    //gl.bufferData(gl.ARRAY_BUFFER, flatten(manTexCoords), gl.STATIC_DRAW);
+    setTexcoords(gl);
+
+    manVAO = gl.createVertexArray();
+    gl.bindVertexArray(manVAO);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, manVBuffer);
+    gl.vertexAttribPointer(aPositionLocM, 4, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPositionLocM);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, manNBuffer);
+    gl.vertexAttribPointer(aNormalLocM, 4, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aNormalLocM);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, manTbuffer);
+    gl.vertexAttribPointer(aTexCoordLocM, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aTexCoordLocM);
+
+    gl.bindVertexArray(null);
+
+    //------------------------------------------------------------------------
+    // TEXTURES 
+    //------------------------------------------------------------------------
+    
+    textureG = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, textureG);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([100, 255, 0, 255]));
+    const imgG = new Image();
+    imgG.crossOrigin = "anonymous";
+    imgG.src = "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/grass.png";
+    imgG.addEventListener('load', function(){
+        gl.bindTexture(gl.TEXTURE_2D, textureG );
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgG);
+        gl.generateMipmap(gl.TEXTURE_2D);
+    });
 
     textureNight = gl.createTexture();
     gl.activeTexture(gl.TEXTURE1)
@@ -489,44 +593,36 @@ function init() {
 
     buildCubeMap(faceInfosDay, textureDay, gl.TEXTURE2);
     buildCubeMap(faceInfosNight,textureNight, gl.TEXTURE1);
-    
-    //------------------------------------------------------------------------
-    //Man
-    //------------------------------------------------------------------------
-    manVBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, manVBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(manPositions), gl.STATIC_DRAW);
-
-    manNBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, manNBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(manNormals), gl.STATIC_DRAW);
-
-    manVAO = gl.createVertexArray();
-    gl.bindVertexArray(manVAO);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, manVBuffer);
-    gl.vertexAttribPointer(aPositionLocM, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(aPositionLocM);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, manNBuffer);
-    gl.vertexAttribPointer(aNormalLocM, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(aNormalLocM);
-    gl.bindVertexArray(null);
 
     textureF= gl.createTexture();
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, textureF);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 0, 0, 255]));
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 0, 255]));
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
     const imgF = new Image();
     imgF.crossOrigin = "anonymous";
     imgF.src = "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/face.png";
     imgF.addEventListener('load', function(){
         gl.bindTexture(gl.TEXTURE_2D, textureF);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgF);
+        gl.generateMipmap(gl.TEXTURE_2D);
+    });
+
+    textureB = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, textureB);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 0, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    const imgB = new Image();
+    imgB.crossOrigin = "anonymous";
+    imgB.src = "https://raw.githubusercontent.com/KFry101/Graphics/main/Projects/Program3/assets/body.png";
+    imgB.addEventListener('load', function(){
+        gl.bindTexture(gl.TEXTURE_2D, textureB);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgB);
         gl.generateMipmap(gl.TEXTURE_2D);
     });
 
@@ -780,7 +876,11 @@ function render() {
 }
 
 function setBodyPartTexture(texture, texUnit){
-        gl.activeTexture(gl.TEXTURE + texUnit);
+        var units = [
+            gl.TEXTURE0, gl.TEXTURE1, gl.TEXTURE2,
+            gl.TEXTURE3, gl.TEXTURE4, gl.TEXTURE5
+        ];
+        gl.activeTexture(units[texUnit]);
         gl.bindTexture(gl.TEXTURE_2D, texture); 
         gl.uniform1i(gl.getUniformLocation(programM, "uTexture"), texUnit);
 }
@@ -803,6 +903,7 @@ function body(){
     var n = normalMatrix(t, true); 
     gl.uniformMatrix4fv(modelViewMatrixLocM,  false, flatten(t)  );
     gl.uniformMatrix3fv(nMatrixLocM, false, flatten(n)); 
+    setBodyPartTexture(textureB, 4);
     drawCube();
 }     
 
