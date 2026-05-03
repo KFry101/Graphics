@@ -70,11 +70,14 @@ var skyVBuffer;
 var textureDay, textureNight;
 var isNight;
 
-var radius = 2;
+var radius = 1.6;
 var theta = 0.2;
 var phi = 1.05;
 var dr = 5.0 * Math.PI/180.0;
-var manFacing= phi - .25
+var manFacing= phi;
+
+var m = 8.0;
+var p = m/2;
 
 // for movement control
 var moveCounter = 0;
@@ -135,12 +138,13 @@ var waveAngle = 0.0;
 var walking   = false;
 var walkAngle = 0.0;
 //-----------------------------------------------------------------------------
-var numLights = 4;
+var numLights = 5;
 var lightPositions = [
-    vec4( 5,   3,  5,   1.0),   // white
-    vec4(-5,   3,  -5,   1.0),   // white
-    vec4(5,   3,  -5,   1.0),   // white
-    vec4(-5,   3,  5,   1.0),   // white
+    vec4( 0,   6,   0,   1.0),   
+    vec4( 8,   4,   8,   1.0),
+    vec4(-8,   4,  -8,   1.0),   
+    vec4( 8,   4,  -8,   1.0),   
+    vec4(-8,   4,   8,   1.0),   
 ];
 
 var dayLightAmbients = [
@@ -148,38 +152,44 @@ var dayLightAmbients = [
     vec4(0.25, 0.15, 0.12, 1.0),
     vec4(0.25, 0.15, 0.12, 1.0),   
     vec4(0.25, 0.15, 0.12, 1.0),
+    vec4(0.25, 0.15, 0.12, 1.0),
 ];
 var dayLightDiffuses = [
-    vec4(0.9, 0.9, 0.8, 1.0),   
-    vec4(0.9, 0.9, 0.8, 1.0),
-    vec4(0.9, 0.9, 0.8, 1.0),   
-    vec4(0.9, 0.9, 0.8, 1.0),
+    vec4(0.7, 0.7, 0.5, 1.0),   
+    vec4(0.5, 0.5, 0.3, 1.0),
+    vec4(0.5, 0.5, 0.3, 1.0),   
+    vec4(0.5, 0.5, 0.3, 1.0),
+    vec4(0.5, 0.5, 0.3, 1.0),
     
 ];
 var dayLightSpeculars = [
     vec4(0.9, 0.85, 0.7, 1.0), 
-    vec4(0.9, 0.85, 0.7, 1.0), 
-    vec4(0.9, 0.85, 0.7, 1.0), 
-    vec4(0.9, 0.85, 0.7, 1.0),   
+    vec4(0.7, 0.55, 0.4, 1.0), 
+    vec4(0.7, 0.55, 0.4, 1.0), 
+    vec4(0.7, 0.55, 0.4, 1.0), 
+    vec4(0.7, 0.55, 0.4, 1.0),    
 ];
 
 var nightLightAmbients = [
-    vec4(0.12, 0.12, 0.15, 1.0), 
-    vec4(0.12, 0.12, 0.15, 1.0),  
-    vec4(0.12, 0.12, 0.15, 1.0), 
-    vec4(0.12, 0.12, 0.15, 1.0),  
+    vec4(0.12, 0.12, 0.2, 1.0), 
+    vec4(0.12, 0.12, 0.2, 1.0),  
+    vec4(0.12, 0.12, 0.2, 1.0), 
+    vec4(0.12, 0.12, 0.2, 1.0),  
+    vec4(0.12, 0.12, 0.2, 1.0),  
 ];
 var nightLightDiffuses = [
-    vec4(0.35, 0.35, 0.5, 1.0),  
-    vec4(0.35, 0.35, 0.5, 1.0), 
-    vec4(0.35, 0.35, 0.5, 1.0),  
-    vec4(0.35, 0.35, 0.5, 1.0), 
+    vec4(0.25, 0.2, 0.6, 1.0),  
+    vec4(0.1, 0.1, 0.4, 1.0), 
+    vec4(0.1, 0.1, 0.4, 1.0),  
+    vec4(0.1, 0.1, 0.4, 1.0), 
+    vec4(0.1, 0.1, 0.4, 1.0),
 ];
 var nightLightSpeculars = [
-    vec4(0.3, 0.3, 0.5, 1.0),  
+    vec4(0.3, 0.3, 0.8, 1.0),  
     vec4(0.3, 0.3, 0.5, 1.0), 
     vec4(0.3, 0.3, 0.5, 1.0),  
     vec4(0.3, 0.3, 0.5, 1.0), 
+    vec4(0.3, 0.3, 0.5, 1.0),
 ];
 
 var lightAmbients;
@@ -201,13 +211,13 @@ function applyLightMode() {
 //GRASS HILLS
 var terrainAmbient  = vec4(0.03, 0.05, 0.03, 1.0);  
 var terrainDiffuse  = vec4(0.25, 0.55, 0.2,  1.0);  
-var terrainSpecular = vec4(0.05, 0.1,  0.05, 1.0);  // very subtle sheen
+var terrainSpecular = vec4(0.05, 0.1,  0.05, 1.0);  
 var terrainShininess = 4.0;                         
 
 //THE MAN
-var manAmbient  = vec4(0.05, 0.05, 0.05, 1.0);  // very dark base — no self-glow
-var manDiffuse  = vec4(0.7,  0.7,  0.7,  1.0);  // bright grey — strong diffuse response
-var manSpecular = vec4(0.4,  0.4,  0.4,  1.0);  // moderate specular highlight
+var manAmbient  = vec4(0.05, 0.05, 0.05, 1.0); 
+var manDiffuse  = vec4(0.7,  0.7,  0.7,  1.0);  
+var manSpecular = vec4(0.4,  0.4,  0.4,  1.0);  
 var manShininess = 32.0;
 
 //-----------------------------------------------------------------------------
@@ -234,13 +244,15 @@ function buildTerrain() {
         terrainPositions.length = 0;
         terrainNormals.length = 0;
         terrainTexCoords.length = 0;
+    
 
         for (var i = 0; i < nRows - 1; ++i) {
             for (var j = 0; j < nColumns - 1; ++j) {
-                var p0 = vec4(8 * i / nRows - 4, data[i][j], 8 * j / nColumns - 4, 1.0);
-                var p1 = vec4(8 * (i + 1) / nRows - 4, data[i + 1][j], 8 * j / nColumns - 4, 1.0);
-                var p2 = vec4(8 * (i + 1) / nRows - 4, data[i + 1][j + 1], 8 * (j + 1) / nColumns - 4, 1.0);
-                var p3 = vec4(8 * i / nRows - 4, data[i][j + 1], 8 * (j + 1) / nColumns - 4, 1.0);
+
+                var p0 = vec4(m * i / nRows - p, data[i][j], m * j / nColumns - p, 1.0);
+                var p1 = vec4(m * (i + 1) / nRows - p, data[i + 1][j], m * j / nColumns - p, 1.0);
+                var p2 = vec4(m * (i + 1) / nRows - p, data[i + 1][j + 1], m * (j + 1) / nColumns - p, 1.0);
+                var p3 = vec4(m * i / nRows - p, data[i][j + 1], m * (j + 1) / nColumns - p, 1.0);
 
                 terrainPositions.push(p0, p1, p2, p3);
 
@@ -647,7 +659,6 @@ function init() {
         waving = event.target.checked;
     };
     
-
     document.addEventListener('keydown', function(e) { keysHeld[e.key.toLowerCase()] = true; });
     document.addEventListener('keyup',   function(e) { keysHeld[e.key.toLowerCase()] = false; });
 
@@ -750,7 +761,7 @@ function render() {
     
     if (keysHeld['w'] || keysHeld['s'] || keysHeld['a'] || keysHeld['d']) {
         walking=true;
-        manFacing= phi - .25
+        manFacing= phi;
     } 
     else { walking = false;}
 
@@ -762,9 +773,9 @@ function render() {
         var sin = Math.sin(manFacing);
 
         var dx = 0, dz = 0;
-       if (keysHeld['w']) { dx -= cos; dz -= sin;  }
+        if (keysHeld['w']) { dx -= cos; dz -= sin;  }
         if (keysHeld['s']) { dx += cos; dz += sin; }
-       if (keysHeld['a']) { dx -=  sin; dz +=  cos; }
+        if (keysHeld['a']) { dx -=  sin; dz +=  cos; }
         if (keysHeld['d']) { dx +=  sin; dz -=  cos;}
 
         cos = Math.cos(manFacing);
@@ -772,6 +783,7 @@ function render() {
 
         manTheta[FigXIdx] = Math.max(0, Math.min(nRows - 2,    manTheta[FigXIdx] + Math.round(dx)));
         manTheta[FigZIdx] = Math.max(0, Math.min(nColumns - 2, manTheta[FigZIdx] + Math.round(dz)));
+        
     }
 
     if ( walking ) {
@@ -808,12 +820,9 @@ function render() {
 
     }
 
-
-   
-
     //the math conversion from the number with  data/manTheta into world origin stuff
-    var manX = 8.0 * manTheta[FigXIdx]/nRows - 4; 
-    var manZ = 8.0 * manTheta[FigZIdx]/nColumns - 4;
+    var manX = m * manTheta[FigXIdx]/nRows - p; 
+    var manZ = m * manTheta[FigZIdx]/nColumns - p;
 
     manTheta[FigYIdx]= data[manTheta[FigXIdx]][manTheta[FigZIdx]] + BODY_HEIGHT + UPPER_LEG_HEIGHT; 
 
@@ -822,6 +831,19 @@ function render() {
     eye = vec3( manX + radius * Math.cos(theta) * Math.cos(phi),
                 manTheta[FigYIdx] + radius * Math.sin(theta),
                 manZ + radius * Math.cos(theta) * Math.sin(phi));
+
+    if (eye[1] < manTheta[FigYIdx]-0.1) {
+        eye[1] = manTheta[FigYIdx]-0.1;
+        console.log(theta);
+        if (theta <= -1.45 ) {
+            theta = -1.45;
+        }
+    }
+  
+    if(theta > 1.45){
+        theta = 1.45;
+    }
+
 
     modelViewMatrix = lookAt(eye, at, up);  
 
@@ -849,7 +871,6 @@ function render() {
         drawSkybox(2);
     }
     
-
     gl.useProgram(programT);
     if (isNight) {
         gl.activeTexture(gl.TEXTURE1);
@@ -867,7 +888,7 @@ function render() {
 
     modelViewMatrix = lookAt(eye, at, up);
     modelViewMatrix = mult(modelViewMatrix, translate(manX, manTheta[FigYIdx], manZ));
-    var facingDeg = -(manFacing * 180.0 / Math.PI) - 90.0;
+    var facingDeg = -(manFacing * 180.0 / Math.PI)-90.0;
     modelViewMatrix = mult(modelViewMatrix, rotate(facingDeg *-1, vec3(0, 1, 0)));
     nMatrix = normalMatrix(modelViewMatrix, true);
 
@@ -890,15 +911,6 @@ function render() {
 }
 
 //-----------------------------------------------------------------------------
-function setBodyPartTexture(texture, texUnit){
-        var units = [
-            gl.TEXTURE0, gl.TEXTURE1, gl.TEXTURE2,
-            gl.TEXTURE3, gl.TEXTURE4, gl.TEXTURE5
-        ];
-        gl.activeTexture(units[texUnit]);
-        gl.bindTexture(gl.TEXTURE_2D, texture); 
-        gl.uniform1i(gl.getUniformLocation(programM, "uTexture"), texUnit);
-}
 
 function head(){ 
     var s = scale(HEAD_WIDTH, HEAD_HEIGHT, HEAD_WIDTH);
@@ -907,7 +919,9 @@ function head(){
     var n = normalMatrix(t, true); 
     gl.uniformMatrix4fv(modelViewMatrixLocM,  false, flatten(t)  );
     gl.uniformMatrix3fv(nMatrixLocM, false, flatten(n)); 
-    setBodyPartTexture(textureF, 3);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, textureF); 
+    gl.uniform1i(gl.getUniformLocation(programM, "uTexture"), 3);
     drawCube();
 }
 
@@ -918,7 +932,9 @@ function body(){
     var n = normalMatrix(t, true); 
     gl.uniformMatrix4fv(modelViewMatrixLocM,  false, flatten(t)  );
     gl.uniformMatrix3fv(nMatrixLocM, false, flatten(n)); 
-    setBodyPartTexture(textureB, 4);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, textureB); 
+    gl.uniform1i(gl.getUniformLocation(programM, "uTexture"), 4);
     drawCube();
 }     
 
