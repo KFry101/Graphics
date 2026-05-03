@@ -844,7 +844,6 @@ function render() {
         theta = 1.45;
     }
 
-
     modelViewMatrix = lookAt(eye, at, up);  
 
     var eyeSpaceLights = [];
